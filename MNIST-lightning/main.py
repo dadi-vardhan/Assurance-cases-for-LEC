@@ -57,9 +57,10 @@ trainer = pl.Trainer(default_root_dir=os.getcwd(),
     precision = 16,
     weights_summary = "full",
     callbacks=[early_stopping],
+    fast_dev_run = True,
     logger = neptune_logger,
-    weights_save_path=os.getcwd(),
-    progress_bar_refresh_rate=2,
+    # weights_save_path=os.getcwd(),
+    progress_bar_refresh_rate=20,
     gpus=1
 )
 

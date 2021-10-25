@@ -17,14 +17,13 @@ dm = MNISTDataModule(os.getcwd())
 # model.eval()
 
 model = MnistModel.load_from_checkpoint(
-    checkpoint_path="/home/dadi_vardhan/RandD/Experiments_for_LEC/Mnist_Lightning/Untitled/MNIS-2/checkpoints/epoch=13-step=755.ckpt",
+    checkpoint_path="/home/dadi_vardhan/RandD/Assurance-cases-for-LEC/MNIST-lightning/Untitled/MNIS-5/checkpoints/epoch=50-step=2753.ckpt",
     #hparams_file="/home/dadi_vardhan/RandD/Experiments_for_LEC/Mnist_Lightning/lightning_logs/version_1/hparams.yaml",
     map_location=None
 )
 
 # init trainer with whatever options
-trainer = pl.Trainer(model,gpus=1,
-                     resume_from_checkpoint="/home/dadi_vardhan/RandD/Experiments_for_LEC/Mnist_Lightning/Untitled/MNIS-2/checkpoints/epoch=13-step=755.ckpt")
+trainer = pl.Trainer(model,gpus=1)
 
 # test (pass in the model)
 #trainer.fit(model)

@@ -12,17 +12,17 @@ class MNISTDataModule(pl.LightningDataModule):
         self.data_dir = data_dir
         self.transform = transforms.Compose(
             [
-                transforms.ToTensor(),
                 transforms.RandomVerticalFlip(),
                 transforms.RandomRotation(10),
-                transforms.Normalize((0.5,), (0.5,)),
-                transforms.RandomAffine(degrees=(30, 70),translate=(0.1, 0.3), scale=(0.5, 0.75))
+                transforms.RandomAffine(degrees=(30, 70),translate=(0.1, 0.3), scale=(0.5, 0.75)),
+                transforms.ToTensor(),
+                transforms.Normalize((0.5,), (0.5,))
             ])
 
         self.dims = (1, 28, 28)
         self.num_classes = 10
         self.batch_size = batch_size
-        self.save_hyperparameters()
+        #self.save_hyperparameters()
 
     def prepare_data(self):
         # download
