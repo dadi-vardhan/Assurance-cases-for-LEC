@@ -1,18 +1,17 @@
 import torch
 import numpy as np
 import pytorch_lightning as pl
-from torchvision.models import resnet18
+from torchvision.models import resnet18, mobilenet_v2,squeezenet1_0
 import torch.nn.functional as F
 from torchmetrics.functional.classification.accuracy import accuracy
-from torchmetrics.functional import f1, precision, recall, specificity
-from torchmetrics import ConfusionMatrix
-from eval_metrics import createConfusionMatrix
-from sklearn.metrics import confusion_matrix
-
+from eval_metrics import eval_metrics
+import matplotlib.pyplot as plt
+from neptune.new.types import File
+import neptune.new as neptune
 
 
 class MnistModel(pl.LightningModule):
-    def __init__(self, channels=1, width=28, height=28, num_classes=10, hidden_size=64, learning_rate=6.918309709189363e-05):
+    def __init__(self, channels=1, width=28, height=28, num_classes=10, hidden_size=32, learning_rate=0.02):
 
         super().__init__()
 
@@ -25,66 +24,97 @@ class MnistModel(pl.LightningModule):
         self.learning_rate = learning_rate
         self.hidden_size = hidden_size
         self.model = resnet18()
-        self.model.conv1 = torch.nn.Conv2d(self.channels,self.hidden_size, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+        self.model.conv1 = torch.nn.Conv2d(1,64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False) # resnet
+        #self.model.features[0][0] = torch.nn.Conv2d(1,32, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False) #mobilenet
+        #self.model.features[0] = torch.nn.Conv2d(1, 96, kernel_size=(7, 7), stride=(2, 2)) #sqeezenet
         self.loss_func = torch.nn.CrossEntropyLoss()
-        # self.save_hyperparameters()
-        # self.logger.log_hyperparams(self.model.hparams)
+        self.save_hyperparameters()
+        self.eval_metrics = None
+        self.run = neptune.init(project="dadivishnuvardhan/AC-LECS", api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lc \
+                HR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdH \
+                VuZS5haSIsImFwaV9rZXkiOiI5ZWFjYzgzNy03MTkxLTRiNmQ \
+                tYjE2Yy0xM2RlZDcwNDQ1M2YifQ==")
 
     def forward(self,x):
+        x = x.float()
         return self.model(x)
 
     def training_step(self, batch, batch_idx):
         x, y = batch
+        x = x.float()
         logits = self(x)
         loss = self.loss_func(logits, y)
         self.log("train_loss", loss, prog_bar=True)
-        self.logger.experiment.log_metric('Train_loss', loss)
-        return loss
+        self.run['train/Train_loss'].log(loss)
+        return {'loss': loss}
+    
+    def training_epoch_end(self, outputs):
+        epoch_avg_loss = torch.stack([output['loss'] for output in outputs]).mean()
+        self.log("train_loss", epoch_avg_loss)
+        self.run['train/train_avg_loss'].log(epoch_avg_loss)
 
     def validation_step(self, batch, batch_idx):
 
         x, y = batch
+        x= x.float()
         logits = self(x)
         loss = self.loss_func(logits, y)
         preds = torch.argmax(logits, dim=1)
         acc = accuracy(preds, y)
         self.log("val_loss", loss, prog_bar=True)
         self.log("val_acc", acc, prog_bar=True)
-        self.logger.experiment.log_metric('Validation_loss', loss)
-        self.logger.experiment.log_metric('Validation_accuracy', acc)
+        self.run['val/Validation_loss'].log(loss)
+        self.run['val/Validation_accuracy'].log(acc)
         return {'val_loss': loss}
     
     def validation_epoch_end(self, outputs):
-    	val_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
-    	log = {'avg_val_loss': val_loss}
-    	return {'val_loss': val_loss, 'log': log}
+        epoch_avg_loss = torch.stack([output['val_loss'] for output in outputs]).mean()
+        self.log(f"val_loss", epoch_avg_loss)
+        self.run["val/avg_val_loss"].log(epoch_avg_loss)
+        # fig = plt.figure()
+        # losses = np.stack([x['val_loss'].cpu().numpy() for x in outputs])
+        # plt.hist(losses)
+        # self.run.experiment['val/loss_histograms'].log(File.astype(fig))
+        # plt.close(fig)
+        return epoch_avg_loss
         
     def test_step(self, batch, batch_idx):
         x, y = batch
+        x=x.float()
         #x = x.view(x.size(0), -1)
         logits = self.model(x)
         loss = self.loss_func(logits, y)
         preds = torch.argmax(logits, dim=1)
         #acc = torch.sum(y == y_hat).item() / (len(y) * 1.0)
         acc = accuracy(preds,y)
-        output = dict({
+        self.log("test_loss", loss,on_epoch=True, prog_bar=True)
+        self.log("test_acc", acc,on_epoch=True, prog_bar=True)
+        self.run['test/Test_loss'].log(loss)
+        self.run['test/Test_accuracy'].log(acc)
+        output = {
           'test_loss': loss,
-          'test_acc': acc})
-        self.log("test_loss", loss, prog_bar=True)
-        self.log("test_acc", acc, prog_bar=True)
-        self.logger.experiment.log_metric('Test_loss', loss)
-        self.logger.experiment.log_metric('Test_accuracy', acc)
-        #cm = ConfusionMatrix(preds.cpu().numpy(),y.cpu().numpy())
-        #cm_fig = createConfusionMatrix(cm)
-        #self.logger.experiment.log_image('confusion_matrix', cm_fig)
-        # f1_score = f1(preds,y,num_classes=self.num_classes)
-        # self.logger.experiment.log_metric('F1_score',f1_score)
-        # prec = precision(preds, y, average='macro', num_classes=self.num_classes)
-        # self.logger.experiment.log_metric('Precision',prec)
-        # rec =recall(preds, y, average='macro', num_classes=self.num_classes)
-        # self.log.experiment.log_metric("Precision_recall",rec)
-        # spe = specificity(preds, y, average='macro', num_classes=self.num_classes)
+          'test_acc': acc,
+          'preds': preds,
+          'trgts':y}
         return output
+    
+    def test_end(self, outputs):
+        avg_loss = torch.stack([x['test_loss'] for x in outputs]).mean()
+        self.run["test/Avg_test_loss"].log(avg_loss)
+        trgts = outputs["trgts"]
+        preds = outputs["preds"]
+        self.eval_metrics = eval_metrics(trgts,preds)
+        cm = self.eval_metrics.plot_conf_matx()
+        cm_norm = self.eval_metrics.plot_conf_matx(normalized=True)
+        self.run["metrics/confusion_matrix"].log(File.as_image(cm))
+        self.run["metrics/confusion matrix"].log(File.as_image(cm_norm))
+        cls_report = self.eval_metrics.classify_report()
+        self.run["metrics/calssification Report"].log(cls_report)
+        return avg_loss
+    
+    def predict_step(self, batch, batch_idx: int, dataloader_idx: int = None):
+        return self(batch)
+    
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)

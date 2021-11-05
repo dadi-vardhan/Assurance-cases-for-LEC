@@ -1,7 +1,7 @@
 #pytorch ckpts
 *.ckpt
 *.pt
-
+.neptune
 #folders
 MNIST/
 Untitled/

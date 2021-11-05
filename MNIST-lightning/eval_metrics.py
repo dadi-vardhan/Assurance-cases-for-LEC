@@ -1,11 +1,10 @@
-import torchmetrics as tm
-from sklearn.metrics import confusion_matrix
-import seaborn as sn
 import pandas as pd
 import numpy as np
-import torch
 import matplotlib.pyplot as plt
+from sklearn.metrics import classification_report
 import itertools
+from scikitplot.metrics import plot_confusion_matrix, plot_roc
+
 
 
 def createConfusionMatrix(cm):
@@ -35,7 +34,7 @@ def createConfusionMatrix(cm):
                          columns=[i for i in classes])
     # Create Heatmap
     plt.figure(figsize=(12, 7))    
-    return sn.heatmap(df_cm, annot=True).get_figure()
+    #return sn.heatmap(df_cm, annot=True).get_figure()
 
 
 def plot_confusion_matrix(cm):
@@ -70,4 +69,28 @@ def plot_confusion_matrix(cm):
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
     return figure
+
+
+    
+class eval_metrics():
+    def __init__(self,targets,preds):
+        self.targets = targets.cpu().numpy()
+        self.preds = preds.cpu().numpy()
+        self.classes = ('Zero', 'One', 'Two', 'Three', 'Four',
+                            'Five', 'Six', 'Seven', 'Eight', 'Nine')
+        self.num_classes = len(self.classes)
+    
+    def plot_conf_matx(self,normalized=False):
+        fig, ax = plt.subplots(figsize=(16, 12))
+        plot_confusion_matrix(self.targets, self.preds, ax=ax,normalize=normalized)
+        plt.colorbar()
+        tick_marks = np.arange(self.num_classes)
+        plt.xticks(tick_marks, self.classes, rotation=45)
+        plt.yticks(tick_marks, self.classes)
+        return fig
+    
+    def classify_report(self):
+        return classification_report(self.targets,self.preds,
+                                        target_names=self.classes)
+        
 
