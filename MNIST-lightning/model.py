@@ -35,7 +35,8 @@ class MnistModel(pl.LightningModule):
                 HR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdH \
                 VuZS5haSIsImFwaV9rZXkiOiI5ZWFjYzgzNy03MTkxLTRiNmQ \
                 tYjE2Yy0xM2RlZDcwNDQ1M2YifQ==")
-        self.train_loss = None
+        self.train_loss = 0
+        self.target_labels = None
 
     def forward(self,x):
         x = x.float()
@@ -49,6 +50,8 @@ class MnistModel(pl.LightningModule):
         self.log("train_loss", loss, prog_bar=True)
         self.run['train/Train_loss'].log(loss)
         self.train_loss = loss
+        
+        
         return {'loss': loss}
     
     def training_epoch_end(self, outputs):
@@ -57,7 +60,6 @@ class MnistModel(pl.LightningModule):
         self.run['train/train_avg_loss'].log(epoch_avg_loss)
 
     def validation_step(self, batch, batch_idx):
-
         x, y = batch
         x= x.float()
         logits = self(x)
@@ -70,7 +72,7 @@ class MnistModel(pl.LightningModule):
         self.run['val/Validation_accuracy'].log(acc)
         if loss > self.train_loss:
             self.log("over_fit",loss>self.train_loss)
-        return {'val_loss': loss}
+        return {'val_loss': loss, 'over_fit' :loss>self.train_loss }
     
     def validation_epoch_end(self, outputs):
         epoch_avg_loss = torch.stack([output['val_loss'] for output in outputs]).mean()
@@ -99,29 +101,38 @@ class MnistModel(pl.LightningModule):
         return output
     
     def test_end(self, outputs):
+        """[Logging all metrics at the end of the test phase]
+
+        Args:
+            outputs ([tensors]): [model predictions]
+
+        Returns:
+            [tensors]: [avg test loss]
+        """
         avg_loss = torch.stack([x['test_loss'] for x in outputs]).mean()
         self.run["test/Avg_test_loss"].log(avg_loss)
         trgts = outputs["trgts"]
         preds = outputs["preds"]
         eval = eval_metrics(trgts,preds,self.classes)
-        cm = self.eval_metrics.plot_conf_matx()
+        cm = eval.plot_conf_matx()
         cm_norm = eval.plot_conf_matx(normalized=True)
         self.run["metrics/confusion_matrix"].log(File.as_image(cm))
-        self.run["metrics/confusion matrix"].log(File.as_image(cm_norm))
+        self.run["metrics/confusion_matrix_Normalized"].log(File.as_image(cm_norm))
         cls_report = eval.classify_report()
         self.run["metrics/calssification Report"].log(cls_report)
         f1 = eval.f1_score_weighted()
-        self.run['test/F1_score'].log(f1)
-        recall = eval.recall_score_weighted()
-        self.run['test/Recall'].log(recall)
-        prec = eval.precision_score_weighted()
-        self.run['test/Precision'].log(prec)
+        self.run['metrics/F1_score'].log(f1)
+        recall = eval.recall_weighted()
+        self.run['metrics/Recall'].log(recall)
+        prec = eval.precision_weighted()
+        self.run['metrics/Precision'].log(prec)
+        if self.target_labels is None:
+            self.target_labels = trgts
         return avg_loss
     
     def predict_step(self, batch, batch_idx: int, dataloader_idx: int = None):
         return self(batch)
     
-
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
         return optimizer

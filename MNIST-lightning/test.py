@@ -15,7 +15,7 @@ from torch.autograd import Variable
 dm = MNISTDataModule(os.getcwd())
 
 model = MnistModel.load_from_checkpoint(
-    checkpoint_path="/home/dadi_vardhan/RandD/Assurance-cases-for-LEC/MNIST-lightning/sample-mnist-epoch=04-val_loss=0.39.ckpt")
+    checkpoint_path="")
 model.eval()
 
 device =get_device()
@@ -28,25 +28,25 @@ trainer.fit(model)
 trainer.test(model, dm)
 
 
-# train_data = datasets.MNIST(root = 'data',train = True,transform = ToTensor(),download = True)
-# test_data = datasets.MNIST(
-#                                 root = 'data', 
-#                                 train = False, 
-#                                 transform = ToTensor()
-#                                 )
-# preds = []
-# targets =[]
-# nums = np.random.randint(0,500,10)
-# for i in nums: 
-#     img = test_data.data[i].reshape(1,28,28)
-#     img = img.unsqueeze_(0)
-#     print(img)
-#     target = test_data.targets[i]
-#     targets.append(target)
-#     logits = model(img)
-#     pred = torch.argmax(logits)
-#     preds.append(pred)
-#     print(f"pred : {pred} and label : {target}")
+train_data = datasets.MNIST(root = 'data',train = True,transform = ToTensor(),download = True)
+test_data = datasets.MNIST(
+                                root = 'data', 
+                                train = False, 
+                                transform = ToTensor()
+                                )
+preds = []
+targets =[]
+nums = np.random.randint(0,500,10)
+for i in nums: 
+    img = test_data.data[i].reshape(1,28,28)
+    img = img.unsqueeze_(0)
+    print(img)
+    target = test_data.targets[i]
+    targets.append(target)
+    logits = model(img)
+    pred = torch.argmax(logits)
+    preds.append(pred)
+    print(f"pred : {pred} and label : {target}")
 
-# # acc = accuracy(preds, targets)
-# # print("acc: ",acc)
+acc = accuracy(preds, targets)
+print("acc: ",acc)

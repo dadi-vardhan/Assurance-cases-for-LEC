@@ -9,10 +9,16 @@ from scikitplot.metrics import plot_confusion_matrix, plot_roc
 
 class eval_metrics():
     def __init__(self,targets,preds,classes):
-        self.targets = targets.cpu().numpy()
-        self.preds = preds.cpu().numpy()
-        self.classes = classes
-        self.num_classes = len(self.classes)
+        try:
+            self.targets = targets.cpu().numpy()
+            self.preds = preds.cpu().numpy()
+            self.classes = classes
+            self.num_classes = len(self.classes)
+        except:
+            self.targets = targets
+            self.preds = preds
+            self.classes = classes
+            self.num_classes = len(self.classes)
     
     def plot_conf_matx(self,normalized=False):
         fig, axs = plt.subplots(figsize=(16, 12))

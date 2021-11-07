@@ -54,3 +54,4 @@ class zoom_image(object):
     
     def  __repr__(self):
         return self.__class__.__name__+'()'
+    

@@ -93,7 +93,6 @@ class Evidential_zoom_monitor():
         axs[2].set_ylim([0, 1])
         axs[2].set_xlabel("Zoom pixels")
         axs[2].set_ylabel("Classification Probability")
-        #fig.show()
         fig.savefig(self.filename)
 
 class Max_monitor():

@@ -23,7 +23,6 @@ class MNISTDataModule(pl.LightningDataModule):
         self.dims = (1, 28, 28)
         self.num_classes = 10
         self.batch_size = batch_size
-        #self.save_hyperparameters()
 
     def prepare_data(self):
         # download
