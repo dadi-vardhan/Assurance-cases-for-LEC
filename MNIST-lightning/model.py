@@ -35,6 +35,7 @@ class MnistModel(pl.LightningModule):
                 HR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdH \
                 VuZS5haSIsImFwaV9rZXkiOiI5ZWFjYzgzNy03MTkxLTRiNmQ \
                 tYjE2Yy0xM2RlZDcwNDQ1M2YifQ==")
+        self.train_loss = None
 
     def forward(self,x):
         x = x.float()
@@ -47,6 +48,7 @@ class MnistModel(pl.LightningModule):
         loss = self.loss_func(logits, y)
         self.log("train_loss", loss, prog_bar=True)
         self.run['train/Train_loss'].log(loss)
+        self.train_loss = loss
         return {'loss': loss}
     
     def training_epoch_end(self, outputs):
@@ -66,17 +68,14 @@ class MnistModel(pl.LightningModule):
         self.log("val_acc", acc, prog_bar=True)
         self.run['val/Validation_loss'].log(loss)
         self.run['val/Validation_accuracy'].log(acc)
+        if loss > self.train_loss:
+            self.log("over_fit",loss>self.train_loss)
         return {'val_loss': loss}
     
     def validation_epoch_end(self, outputs):
         epoch_avg_loss = torch.stack([output['val_loss'] for output in outputs]).mean()
         self.log(f"val_loss", epoch_avg_loss)
         self.run["val/avg_val_loss"].log(epoch_avg_loss)
-        # fig = plt.figure()
-        # losses = np.stack([x['val_loss'].cpu().numpy() for x in outputs])
-        # plt.hist(losses)
-        # self.run.experiment['val/loss_histograms'].log(File.astype(fig))
-        # plt.close(fig)
         return epoch_avg_loss
         
     def test_step(self, batch, batch_idx):

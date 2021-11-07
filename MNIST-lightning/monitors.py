@@ -145,14 +145,9 @@ class Avg_prob_monitor():
     
     def __str__(self):
         return "Avg pred: "+str(self.monitor_pred)
-        
-        
-            
-        
 
+      
 
-        
-        
 
 
 if __name__ == '__main__':
