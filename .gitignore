@@ -4,6 +4,7 @@
 *.pt
 .neptune
 #folders
+raw/
 MNIST/
 Untitled/
 lightning_logs/

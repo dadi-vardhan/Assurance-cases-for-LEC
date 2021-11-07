@@ -1,3 +1,5 @@
+import sys
+sys.path.insert(0, '/home/dadi_vardhan/RandD/Assurance-cases-for-LEC/MNIST-lightning')
 from eval_metrics import eval_metrics
 
 

@@ -14,8 +14,8 @@ seed_everything(123, workers=True)
 
 # callbacks
 early_stopping = EarlyStopping(
-    monitor="over_fit",
-    patience = 5,
+    monitor="val_loss",
+    patience = 3,
     check_finite=True,
 )
 

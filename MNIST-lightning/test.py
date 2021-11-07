@@ -5,11 +5,9 @@ import pytorch_lightning as pl
 from datamodule  import MNISTDataModule
 from model import  MnistModel
 from torchvision import datasets
-from torchvision.transforms import transforms, ToTensor
+from torchvision.transforms import ToTensor
 from utils import get_device
 from torchmetrics.functional.classification.accuracy import accuracy
-from torchvision import models
-from torch.autograd import Variable
 
 
 dm = MNISTDataModule(os.getcwd())

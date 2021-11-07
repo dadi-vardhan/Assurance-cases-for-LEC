@@ -1,11 +1,10 @@
 import torch
 import numpy as np
 import pytorch_lightning as pl
-from torchvision.models import resnet18, mobilenet_v2,squeezenet1_0
+from torchvision.models import resnet18,mobilenet_v2,squeezenet1_0
 import torch.nn.functional as F
 from torchmetrics.functional.classification.accuracy import accuracy
 from eval_metrics import eval_metrics
-import matplotlib.pyplot as plt
 from neptune.new.types import File
 import neptune.new as neptune
 
@@ -36,7 +35,6 @@ class MnistModel(pl.LightningModule):
                 VuZS5haSIsImFwaV9rZXkiOiI5ZWFjYzgzNy03MTkxLTRiNmQ \
                 tYjE2Yy0xM2RlZDcwNDQ1M2YifQ==")
         self.train_loss = 0
-        self.target_labels = None
 
     def forward(self,x):
         x = x.float()
@@ -50,8 +48,6 @@ class MnistModel(pl.LightningModule):
         self.log("train_loss", loss, prog_bar=True)
         self.run['train/Train_loss'].log(loss)
         self.train_loss = loss
-        
-        
         return {'loss': loss}
     
     def training_epoch_end(self, outputs):
@@ -126,8 +122,6 @@ class MnistModel(pl.LightningModule):
         self.run['metrics/Recall'].log(recall)
         prec = eval.precision_weighted()
         self.run['metrics/Precision'].log(prec)
-        if self.target_labels is None:
-            self.target_labels = trgts
         return avg_loss
     
     def predict_step(self, batch, batch_idx: int, dataloader_idx: int = None):

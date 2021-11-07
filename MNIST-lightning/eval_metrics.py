@@ -3,7 +3,7 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report,accuracy_score,f1_score,precision_score,recall_score
-from scikitplot.metrics import plot_confusion_matrix, plot_roc
+from scikitplot.metrics import plot_confusion_matrix
 
 
 
