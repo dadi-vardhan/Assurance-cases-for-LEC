@@ -1,4 +1,5 @@
 #pytorch ckpts
+*.png
 *.ckpt
 *.pt
 .neptune

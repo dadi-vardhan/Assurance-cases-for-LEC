@@ -11,7 +11,7 @@ import neptune.new as neptune
 
 
 class MnistModel(pl.LightningModule):
-    def __init__(self, channels=1, width=28, height=28, num_classes=10, hidden_size=32, learning_rate=0.02):
+    def __init__(self, channels=1, width=28, height=28,hidden_size=32, learning_rate=0.02):
 
         super().__init__()
 
@@ -20,7 +20,9 @@ class MnistModel(pl.LightningModule):
         self.channels = channels
         self.width = width
         self.height = height
-        self.num_classes = num_classes
+        self.classes = ('Zero', 'One', 'Two', 'Three', 'Four',
+                            'Five', 'Six', 'Seven', 'Eight', 'Nine')
+        self.num_classes = len(self.classes)
         self.learning_rate = learning_rate
         self.hidden_size = hidden_size
         self.model = resnet18()
@@ -29,7 +31,6 @@ class MnistModel(pl.LightningModule):
         #self.model.features[0] = torch.nn.Conv2d(1, 96, kernel_size=(7, 7), stride=(2, 2)) #sqeezenet
         self.loss_func = torch.nn.CrossEntropyLoss()
         self.save_hyperparameters()
-        self.eval_metrics = None
         self.run = neptune.init(project="dadivishnuvardhan/AC-LECS", api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lc \
                 HR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdH \
                 VuZS5haSIsImFwaV9rZXkiOiI5ZWFjYzgzNy03MTkxLTRiNmQ \
@@ -103,13 +104,19 @@ class MnistModel(pl.LightningModule):
         self.run["test/Avg_test_loss"].log(avg_loss)
         trgts = outputs["trgts"]
         preds = outputs["preds"]
-        self.eval_metrics = eval_metrics(trgts,preds)
+        eval = eval_metrics(trgts,preds,self.classes)
         cm = self.eval_metrics.plot_conf_matx()
-        cm_norm = self.eval_metrics.plot_conf_matx(normalized=True)
+        cm_norm = eval.plot_conf_matx(normalized=True)
         self.run["metrics/confusion_matrix"].log(File.as_image(cm))
         self.run["metrics/confusion matrix"].log(File.as_image(cm_norm))
-        cls_report = self.eval_metrics.classify_report()
+        cls_report = eval.classify_report()
         self.run["metrics/calssification Report"].log(cls_report)
+        f1 = eval.f1_score_weighted()
+        self.run['test/F1_score'].log(f1)
+        recall = eval.recall_score_weighted()
+        self.run['test/Recall'].log(recall)
+        prec = eval.precision_score_weighted()
+        self.run['test/Precision'].log(prec)
         return avg_loss
     
     def predict_step(self, batch, batch_idx: int, dataloader_idx: int = None):
