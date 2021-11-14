@@ -65,6 +65,8 @@ def test_f1_score():
         assert False
     else:
         assert True
+        
+
     
 if __name__ == "__main__":
     test_plot_confusion_matrix()

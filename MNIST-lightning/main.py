@@ -3,9 +3,10 @@ import os
 import pytorch_lightning as pl
 from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
-#from pytorch_lightning.runs import Neptunerun
 from datamodule import MNISTDataModule
 from model import MnistModel
+from pytorch_lightning.loggers.neptune import NeptuneLogger
+
 
 
 # setting global seed
@@ -14,10 +15,19 @@ seed_everything(123, workers=True)
 
 # callbacks
 early_stopping = EarlyStopping(
-    monitor="val_loss",
-    patience = 3,
-    check_finite=True,
-)
+                    monitor="val_loss",
+                    patience = 3,
+                    check_finite=True,
+                )   
+
+# neptune logger for logging metrics
+neptune_logger = NeptuneLogger(
+    api_key=os.environ['NEPTUNE_API_TOKEN'],
+    project_name="dadivishnuvardhan/AC-LECS",
+    #experiment_name="default",
+    #tags=["mnist", "lightning", "pytorch"],
+    #upload_source_files=["**/*.py", "*.yaml"]
+    )
 
 # checkpoint_callback = ModelCheckpoint(
 #     monitor="val_loss",
@@ -37,7 +47,7 @@ trainer = pl.Trainer(default_root_dir=os.getcwd(),
     weights_summary = "full",
     callbacks=[early_stopping],
     fast_dev_run = False,
-    #logger = run,
+    logger = neptune_logger,
     progress_bar_refresh_rate=5,
     gpus=1)
 
@@ -45,3 +55,6 @@ trainer.fit(model, dm)
 trainer.validate(model,dm)
 trainer.test(model,dm)
 #trainer.tune(model,dm)
+
+# stopping logger
+neptune_logger.experiment.stop()

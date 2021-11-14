@@ -3,6 +3,7 @@
 *.ckpt
 *.pt
 .neptune
+*.json
 #folders
 raw/
 MNIST/
