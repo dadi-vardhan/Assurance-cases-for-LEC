@@ -35,15 +35,12 @@ class MnistModel(pl.LightningModule):
         #         HR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdH \
         #         VuZS5haSIsImFwaV9rZXkiOiI5ZWFjYzgzNy03MTkxLTRiNmQ \
         #         tYjE2Yy0xM2RlZDcwNDQ1M2YifQ==")
-        
 
     def forward(self,x):
-        x = x.float()
         return self.model(x)
 
     def training_step(self, batch, batch_idx):
         x, y = batch
-        x = x.float()
         logits = self(x)
         loss = self.loss_func(logits, y)
         self.log("train_loss", loss, prog_bar=True)
@@ -60,7 +57,6 @@ class MnistModel(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         x, y = batch
-        x= x.float()
         logits = self(x)
         loss = self.loss_func(logits, y)
         preds = torch.argmax(logits, dim=1)
@@ -84,7 +80,6 @@ class MnistModel(pl.LightningModule):
         
     def test_step(self, batch, batch_idx):
         x, y = batch
-        x=x.float()
         #x = x.view(x.size(0), -1)
         logits = self.model(x)
         loss = self.loss_func(logits, y)

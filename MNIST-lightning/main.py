@@ -51,6 +51,8 @@ trainer = pl.Trainer(default_root_dir=os.getcwd(),
     progress_bar_refresh_rate=5,
     gpus=1)
 
+neptune_logger.log_model_summary(model=model, max_depth=-1)
+
 trainer.fit(model, dm)
 trainer.validate(model,dm)
 trainer.test(model,dm)
