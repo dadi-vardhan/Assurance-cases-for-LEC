@@ -1,3 +1,4 @@
+from cv2 import sepFilter2D
 import torch
 import os
 import numpy as np
@@ -9,13 +10,13 @@ from torchvision.transforms import ToTensor
 from utils import get_device
 from torchmetrics.functional.classification.accuracy import accuracy
 from torch.utils.data import DataLoader
+from eval_metrics import eval_metrics
 
 
 dm = MNISTDataModule(os.getcwd())
 
 model = MnistModel.load_from_checkpoint(
-    checkpoint_path="/home/dadi_vardhan/RandD/Assurance-cases-for-LEC/lightning_logs/version_406388/checkpoints/epoch=30-step=1673.ckpt")
-model.eval()
+    checkpoint_path="/home/dadi_vardhan/RandD/Assurance-cases-for-LEC/MNIST-lightning/Untitled/AC-71/checkpoints/epoch=18-step=1025.ckpt").eval()
 
 device =get_device()
 # init trainer with whatever options
@@ -31,8 +32,7 @@ trainer = pl.Trainer(checkpoint_callback=True,
 # test_data = datasets.MNIST(
 #                                 root = 'data', 
 #                                 train = False, 
-#                                 transform = ToTensor()
-#                                 )
+#                                 download=True,)
 # preds = []
 # targets =[]
 # nums = np.random.randint(0,500,10)
@@ -52,6 +52,8 @@ trainer = pl.Trainer(checkpoint_callback=True,
 
 #testing
 import numpy as np
+classes = ('Zero', 'One', 'Two', 'Three', 'Four',
+                            'Five', 'Six', 'Seven', 'Eight', 'Nine')
 
 model.freeze()
 test_loader = DataLoader(datasets.MNIST(os.getcwd(), train=False, download=True, transform=ToTensor()), batch_size=1028, shuffle=True)
@@ -68,5 +70,10 @@ for i, (x, y) in enumerate(test_loader):
         break
 y_true = np.hstack(y_true)
 y_pred = np.hstack(y_pred)
-print(f"accuracy: {accuracy(y_true, y_pred)}")
+
+em_mon = eval_metrics(y_true, y_pred,classes=classes)
+print(f"accracy-mon:{em_mon.accuracy()}")
+print(em_mon.classify_report())
+
+
 
