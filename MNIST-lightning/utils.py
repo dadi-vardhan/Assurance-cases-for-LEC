@@ -48,7 +48,7 @@ class zoom_image(object):
             self.ss_list.append(ss)
         zoomed_imgs = np.array(zoomed_imgs)
         if self.monitor == True:
-            return zoomed_imgs,self.ss_list
+            return zoomed_imgs,self.ss_list,rimgs
         elif self.monitor == False:
             return zoomed_imgs[rand_img].reshape((28,28))
     

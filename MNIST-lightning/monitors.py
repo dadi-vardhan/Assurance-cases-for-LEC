@@ -25,18 +25,20 @@ class Evidential_zoom_monitor():
         self.lu = []
         self.classifications = []
         self.scores = np.zeros((1, self.num_classes))
-        self.filename = "evidentail_zoom.png"
+        self.rand_num = np.random.randint(0, 10000)
+        self.filename = "evd_ops/evidentail_zoom "+str(self.rand_num)+".png"
         self.monitor_pred = None
+        self.rimgs = None
     
     def monitor(self,img):
-        imgs, ss_list = self.zoomed_imgs(img)
+        imgs, ss_list,rimgs = self.zoomed_imgs(img)
         self.ldeg = ss_list
+        self.rimgs = rimgs
         for img in imgs:
             trans = transforms.ToTensor()
             img_tensor = trans(img)
             img_tensor.unsqueeze_(0)
             img_variable = Variable(img_tensor)
-            #img_variable = img_variable.to(self.device)
     
             if self.uncertainty:
                 output = self.model.forward(img_tensor).cpu().detach()
@@ -62,11 +64,12 @@ class Evidential_zoom_monitor():
                 preds = preds.flatten()
                 self.classifications.append(preds[0].item())
 
-            self.scores += prob.detach().cpu().numpy() >= self.threshold
+            prob = prob.detach().cpu().numpy()[0:self.num_classes]
+            self.scores += prob >= self.threshold
             self.lp.append(prob.tolist())
+        return self.monitor_pred
             
-            
-            
+    def plot_evidential_zoom(self):
         labels = np.arange(10)[self.scores[0].astype(bool)]
         lp = np.array(self.lp)[:, labels]
         c = ["blue", "red", "brown", "purple", "cyan"]
@@ -81,26 +84,21 @@ class Evidential_zoom_monitor():
         if self.uncertainty:
             labels += ["uncertainty"]
             axs[2].plot(self.ldeg, self.lu, marker="<", c="black")
-
-
-
         #axs[0].set_title("Zoomed \"1\" Digit Classifications")
         axs[0].imshow(1 - self.rimgs, cmap="gray")
         axs[0].axis("off")
         #plt.pause(0.001)
-
         empty_lst = []
         empty_lst.append(self.classifications)
         axs[1].table(cellText=empty_lst, bbox=[0, 1, 1, 1])
         axs[1].axis("off")
-
         axs[2].legend(labels)
         axs[2].set_xlim([8, 28])
         axs[2].set_ylim([0, 1])
         axs[2].set_xlabel("Zoom pixels")
         axs[2].set_ylabel("Classification Probability")
         fig.savefig(self.filename)
-        return self.monitor_pred
+        
 
 class Max_monitor():
     
@@ -190,7 +188,7 @@ for i, (x, y) in enumerate(test_data):
     y_true.append(y)
     y_pred.append(y_hat)
 
-    if i == 5:
+    if i == len(test_data):
         break
 y_true = np.hstack(y_true)
 y_pred = np.hstack(y_pred)
