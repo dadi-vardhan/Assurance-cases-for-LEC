@@ -13,11 +13,7 @@ class MNISTDataModule(pl.LightningDataModule):
         self.transform = transforms.Compose(
             [
                 zoom_image(),
-                #transforms.RandomVerticalFlip(),
-                #transforms.RandomRotation(10),
-                #transforms.RandomAffine(degrees=(30, 70),translate=(0.1, 0.3), scale=(0.5, 0.75)),
-                transforms.ToTensor(),
-                #transforms.Normalize((0.5,), (0.5,))
+                transforms.ToTensor()
             ])
         
         self.dims = (1, 28, 28)
