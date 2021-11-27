@@ -1,6 +1,8 @@
 from cv2 import sepFilter2D
+from pytorch_lightning.loggers.neptune import NeptuneLogger
 from torchvision import datasets
 import numpy as np
+import os
 import matplotlib.pyplot as plt
 import torch
 import torch.nn.functional as F
@@ -10,6 +12,10 @@ from model import  MnistModel
 from torchvision.transforms import transforms, ToTensor
 from torch.autograd import Variable
 from eval_metrics import eval_metrics
+from pytorch_lightning import seed_everything
+from datamodule import MNISTDataModule
+import neptune.new as neptune
+from torch.utils.data import DataLoader
 
 class Evidential_zoom_monitor():
     
@@ -104,13 +110,12 @@ class Max_monitor():
     
     def __init__(self,model):
         self.zoomed_imgs = zoom_image(monitor=True)
-        self.device = get_device()
         self.model = model
         self.model_preds = []
         self.monitor_pred = None
     
     def monitor(self, img):
-        imgs, _ = self.zoomed_imgs(img)
+        imgs, _,_ = self.zoomed_imgs(img)
         for img in imgs:
             trans = transforms.ToTensor()
             img_tensor = trans(img)
@@ -128,7 +133,6 @@ class Avg_prob_monitor():
     
     def __init__(self,model):
         self.zoomed_imgs = zoom_image(monitor=True)
-        self.device = get_device()
         self.model = model
         self.model_prob_preds = []
         self.mean_prob_pred = None
@@ -136,7 +140,6 @@ class Avg_prob_monitor():
         
     def monitor(self,img):
         imgs, _ = self.zoomed_imgs(img)
-        
         for img in imgs:
             trans = transforms.ToTensor()
             img_tensor = trans(img)
@@ -146,7 +149,6 @@ class Avg_prob_monitor():
             self.model_prob_preds.append(model_probs)
         self.mean_prob_pred = np.mean(np.array(self.model_prob_preds), axis=0)
         self.monitor_pred = np.argmax(self.mean_prob_pred)
-        #print(self.model_prob_preds)
         self.model_prob_preds = []
         self.mean_prob_pred = None
         return self.monitor_pred
@@ -154,46 +156,80 @@ class Avg_prob_monitor():
     def __str__(self):
         return "Avg pred: "+str(self.monitor_pred)
     
-
-
       
-
-
-
 if __name__ == '__main__':
-    model = MnistModel.load_from_checkpoint(
-    checkpoint_path="/home/dadi_vardhan/RandD/Assurance-cases-for-LEC/MNIST-lightning/Untitled/AC-71/checkpoints/epoch=18-step=1025.ckpt",
-    #hparams_file="",
-    map_location=None).eval()
-    #train_data = datasets.MNIST(root = 'data',train = True,transform = ToTensor(),download = True)
-    test_data = datasets.MNIST(
-                                root = 'data', 
-                                train = False, 
-                                #transform = ToTensor()
-                                )
     
+    seed_everything(123, workers=True)
+    
+    # neptune logger for logging metrics
+    neptune_logger = neptune.init(
+        api_token=os.environ['NEPTUNE_API_TOKEN'],
+        project="dadivishnuvardhan/AC-LECS",
+        run="AC-77")
+    
+    model = MnistModel.load_from_checkpoint(
+    checkpoint_path="/home/dadi_vardhan/RandD/Assurance-cases-for-LEC/MNIST-lightning/Untitled/AC-77/checkpoints/epoch=8-step=485.ckpt",
+                        map_location=None).eval()
 
-classes = ('Zero', 'One', 'Two', 'Three', 'Four',
-                            'Five', 'Six', 'Seven', 'Eight', 'Nine')
-model.freeze()
-#test_loader = DataLoader(datasets.MNIST(os.getcwd(), train=False, download=True, transform=ToTensor()), batch_size=1028, shuffle=True)
+    classes = ('Zero', 'One', 'Two', 'Three', 'Four',
+                                'Five', 'Six', 'Seven', 'Eight', 'Nine')
+    model.freeze()
+    test_data = datasets.MNIST(os.getcwd(), train=False, download=True)
+
+    # MAX monitor 
+    max_mon = Max_monitor(model)
+    y_true_max, y_pred_max = [],[]
+    for i, (x, y) in enumerate(test_data):
+        y_hat = max_mon.monitor(x)
+        y_true_max.append(y)
+        y_pred_max.append(y_hat)
+
+        if i == len(test_data):
+            break
+    y_true_max = np.hstack(y_true_max)
+    y_pred_max = np.hstack(y_pred_max)
 
 
-mon = Evidential_zoom_monitor(model,num_classes=len(classes),uncertainty=True)
-y_true, y_pred = [],[]
-for i, (x, y) in enumerate(test_data):
-    y_hat = mon.monitor(x)
-    #y = y.cpu().detach().numpy()
+    em_max_mon = eval_metrics(y_true_max, y_pred_max,classes=classes)
+    neptune_logger["Max_monitor/accuracy"] = em_max_mon.accuracy()
+    neptune_logger["Max_monitor/precision"] = em_max_mon.precision_weighted()
+    neptune_logger["Max_monitor/recall"] = em_max_mon.recall_weighted()
+    neptune_logger["Max_monitor/f1"] = em_max_mon.f1_score_weighted()
+    neptune_logger["Max_monitor/classification_report"] = em_max_mon.classify_report()
+    neptune_logger["Max_monitor/Confusion_matrix"].log(neptune.types.File.as_image(em_max_mon.confusion_matrix()))
+    neptune_logger["Max_monitor/Confusion_matrix_normalized"].log(neptune.types.File.as_image(em_max_mon.confusion_matrix(normalize=True)))
+    
+    
+    # AVG monitor
+    avg_mon = Avg_prob_monitor(model)
+    y_true_avg, y_pred_avg = [],[]
+    for i, (x, y) in enumerate(test_data):
+        y_hat = avg_mon.monitor(x)
+        y_true_avg.append(y)
+        y_pred_avg.append(y_hat)
 
-    y_true.append(y)
-    y_pred.append(y_hat)
+        if i == len(test_data):
+            break
+    y_true_avg = np.hstack(y_true_avg)
+    y_pred_avg = np.hstack(y_pred_avg)
 
-    if i == len(test_data):
-        break
-y_true = np.hstack(y_true)
-y_pred = np.hstack(y_pred)
-
-
-em_mon = eval_metrics(y_true, y_pred,classes=classes)
-print(f"accracy-mon:{em_mon.accuracy()}")
-print(em_mon.classify_report())
+    em_avg_mon = eval_metrics(y_true_avg, y_pred_avg,classes=classes)
+    neptune_logger["Avg_prob_monitor/accuracy"] = em_avg_mon.accuracy()
+    neptune_logger["Avg_prob_monitor/precision"] = em_avg_mon.precision_weighted()
+    neptune_logger["Avg_prob_monitor/recall"] = em_avg_mon.recall_weighted()
+    neptune_logger["Avg_prob_monitor/f1"] = em_avg_mon.f1_score_weighted()
+    neptune_logger["Avg_prob_monitor/classification_report"] = em_avg_mon.classify_report()
+    neptune_logger["Avg_prob_monitor/Confusion_matrix"].log(neptune.types.File.as_image(em_avg_mon.confusion_matrix()))
+    neptune_logger["Avg_prob_monitor/Confusion_matrix_normalized"].log(neptune.types.File.as_image(em_avg_mon.confusion_matrix(normalize=True)))
+    
+    
+    
+    # Evidential Zoom Monitor
+    
+    
+    
+    
+    
+    
+    
+    neptune_logger.stop()

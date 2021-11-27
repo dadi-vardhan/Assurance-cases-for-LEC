@@ -8,26 +8,25 @@ from model import MnistModel
 from pytorch_lightning.loggers.neptune import NeptuneLogger
 
 
-
 # setting global seed
 seed_everything(123, workers=True)
 
 
 # callbacks
 early_stopping = EarlyStopping(
-                    monitor="val_loss",
-                    patience = 3,
-                    check_finite=True,
-                )   
+    monitor="val_loss",
+    patience=3,
+    check_finite=True,
+)
 
 # neptune logger for logging metrics
 neptune_logger = NeptuneLogger(
     api_key=os.environ['NEPTUNE_API_TOKEN'],
     project_name="dadivishnuvardhan/AC-LECS",
-    #experiment_name="default",
-    #tags=["mnist", "lightning", "pytorch"],
+    # experiment_name="default",
+    tags=["mnist", "sqz-net", "full", "no-augment"],
     #upload_source_files=["**/*.py", "*.yaml"]
-    )
+)
 
 # checkpoint_callback = ModelCheckpoint(
 #     monitor="val_loss",
@@ -35,28 +34,30 @@ neptune_logger = NeptuneLogger(
 
 # Init DataModule
 dm = MNISTDataModule(os.getcwd())
+dm.prepare_data()
 
 # Init model from datamodule's attributes
 model = MnistModel(*dm.size())
 
 # Init trainer
 trainer = pl.Trainer(default_root_dir=os.getcwd(),
-    min_epochs=5,
-    max_epochs=500,
-    precision = 16,
-    weights_summary = "full",
-    callbacks=[early_stopping],
-    fast_dev_run = False,
-    logger = neptune_logger,
-    progress_bar_refresh_rate=5,
-    gpus=1)
+                     min_epochs=5,
+                     max_epochs=500,
+                     precision=16,
+                     weights_summary="full",
+                     callbacks=[early_stopping],
+                     fast_dev_run=False,
+                     logger=neptune_logger,
+                     progress_bar_refresh_rate=5,
+                     gpus=1)
 
-neptune_logger.log_model_summary(model=model, max_depth=-1)
-
+dm.setup(stage="fit")
 trainer.fit(model, dm)
-trainer.validate(model,dm)
-trainer.test(model,dm)
-#trainer.tune(model,dm)
+trainer.validate(model, dm)
+
+dm.setup(stage="test")
+trainer.test(model, dm)
+# trainer.tune(model,dm)
 
 # stopping logger
 neptune_logger.experiment.stop()
