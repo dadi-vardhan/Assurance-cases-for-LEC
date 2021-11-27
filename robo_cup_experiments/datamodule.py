@@ -1,3 +1,4 @@
+from typing import NoReturn
 import cv2 as cv
 import torch
 import pytorch_lightning as pl
@@ -8,13 +9,18 @@ import numpy as np
 from utils import zoom_image
 import random
 from setuptools.namespaces import flatten
+import os
 
 DataPath = '/home/dadi_vardhan/RandD/Assurance-cases-for-LEC/robo_cup_tools' 
 
 class RoboCupDataset(Dataset):
-    def __init__(self, data_dir=DataPath,img_size=(224,224),train=False,test=False,valid=False):
+    def __init__(self, data_dir=DataPath,train=False,test=False,valid=False,transform=False):
         self.image_paths = []
-        self.img_size = img_size
+        self.transform = transform
+        self.data_dir = data_dir
+        
+        #idx_to_class = {i:j for i, j in enumerate(classes)}
+        #class_to_idx = {value:key for key,value in idx_to_class.items()}
         self.class_to_idx = {"AXIS": 0, 
                         "BEARING": 1,
                         "BEARING_BOX": 2,
@@ -31,11 +37,11 @@ class RoboCupDataset(Dataset):
                         "S40_40_G": 13}
         
         if train == True:
-            self.image_paths = self.get_data_paths(data_dir)[0]
+            self.image_paths = self.get_data_paths(self.data_dir)[0]
         elif test == True:
-            self.image_paths = self.get_data_paths(data_dir)[2]
+            self.image_paths = self.get_data_paths(self.data_dir)[2]
         elif valid == True:
-            self.image_paths = self.get_data_paths(data_dir)[1]
+            self.image_paths = self.get_data_paths(self.data_dir)[1]
         
         
     def __len__(self):
@@ -44,21 +50,19 @@ class RoboCupDataset(Dataset):
     def __getitem__(self, idx):
         image_filepath = self.image_paths[idx]
         image = cv.imread(image_filepath)
-        image = image[:, :, 0]
         
-        res_image = cv.resize(image, self.img_size, interpolation = cv.INTER_AREA)/255
+        image = cv.cvtColor(image, cv.COLOR_BGR2RGB)
 
-        label = image_filepath.split('.')[-2]
+        label = image_filepath.split('/')[-2]
         label = self.class_to_idx[label]
-
-        new_image = torch.from_numpy(res_image)
-        new_image = new_image[np.newaxis, :]
-
-        return new_image, label
+        if self.transform is not None:
+            image = self.transform(image=image)["image"]
+            print(image)
+        return image, label
     
-    def get_data_paths(self,data_path):
+    def get_data_paths(self,data_dir):
         image_paths = []
-        for path in glob.glob(data_path + '/*'):
+        for path in glob.glob(data_dir + '/*'):
             image_paths.append(glob.glob(path + '/*'))
             
         image_paths = list(flatten(image_paths))
@@ -66,7 +70,6 @@ class RoboCupDataset(Dataset):
         train_image_paths = image_paths[:int(0.7*len(image_paths))]
         valid_image_paths = image_paths[int(0.7*len(image_paths)):int(0.1*len(image_paths))]
         test_image_paths = image_paths[:int(0.8*len(image_paths)):]
-    
         return train_image_paths, valid_image_paths, test_image_paths
     
 
@@ -76,14 +79,19 @@ class RoboCupDataModule(pl.LightningDataModule):
         super().__init__()
         self.data_dir = data_dir
         self.transform = transforms.Compose(
-            [
+            [   transforms.Resize((224,224)),
                 zoom_image(),
                 transforms.ToTensor()
             ])
 
         self.batch_size = batch_size
     
-
+    # def prepare_data(self):
+    #     # load data
+    #     RoboCupDataset(self.data_dir, train=True)
+    #     RoboCupDataset(self.data_dir, test=True)
+    #     RoboCupDataset(self.data_dir, valid=True)
+        
     def setup(self, stage=None):
 
         # Assign train/val datasets for use in dataloaders
@@ -96,10 +104,16 @@ class RoboCupDataModule(pl.LightningDataModule):
             self.robo_cup_test = RoboCupDataset(self.data_dir, test=True,transform=transforms.ToTensor())
 
     def train_dataloader(self):
-        return DataLoader(self.mnist_train, batch_size=self.batch_size,num_workers=8)
+        return DataLoader(self.robo_cup_train, batch_size=self.batch_size,num_workers=8)
 
     def val_dataloader(self):
-        return DataLoader(self.mnist_val, batch_size=self.batch_size,num_workers=8)
+        return DataLoader(self.robo_cup_val, batch_size=self.batch_size,num_workers=8)
 
     def test_dataloader(self):
-        return DataLoader(self.mnist_test, batch_size=self.batch_size,num_workers=8)
+        return DataLoader(self.robo_cup_test, batch_size=self.batch_size,num_workers=8)
+
+
+if __name__ == "__main__":
+    DataPath = '/home/dadi_vardhan/RandD/Assurance-cases-for-LEC/robo_cup_tools'
+    dm = RoboCupDataset(DataPath,valid=True)
+    print(len(dm))  # Number of images in the dataset
