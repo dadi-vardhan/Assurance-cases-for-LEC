@@ -9,6 +9,7 @@ raw/
 MNIST/
 Untitled/
 robo_cup_tools/
+tools/
 lightning_logs/
 
 # Byte-compiled / optimized / DLL files

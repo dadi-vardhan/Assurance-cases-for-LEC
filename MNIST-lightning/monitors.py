@@ -139,7 +139,7 @@ class Avg_prob_monitor():
         self.monitor_pred = None
         
     def monitor(self,img):
-        imgs, _ = self.zoomed_imgs(img)
+        imgs, _,_ = self.zoomed_imgs(img)
         for img in imgs:
             trans = transforms.ToTensor()
             img_tensor = trans(img)
@@ -165,10 +165,10 @@ if __name__ == '__main__':
     neptune_logger = neptune.init(
         api_token=os.environ['NEPTUNE_API_TOKEN'],
         project="dadivishnuvardhan/AC-LECS",
-        run="AC-77")
+        run="AC-81")
     
     model = MnistModel.load_from_checkpoint(
-    checkpoint_path="/home/dadi_vardhan/RandD/Assurance-cases-for-LEC/MNIST-lightning/Untitled/AC-77/checkpoints/epoch=8-step=485.ckpt",
+    checkpoint_path="/home/dadi_vardhan/RandD/Assurance-cases-for-LEC/MNIST-lightning/Untitled/AC-81/checkpoints/epoch=5-step=323.ckpt",
                         map_location=None).eval()
 
     classes = ('Zero', 'One', 'Two', 'Three', 'Four',
@@ -196,8 +196,8 @@ if __name__ == '__main__':
     neptune_logger["Max_monitor/recall"] = em_max_mon.recall_weighted()
     neptune_logger["Max_monitor/f1"] = em_max_mon.f1_score_weighted()
     neptune_logger["Max_monitor/classification_report"] = em_max_mon.classify_report()
-    neptune_logger["Max_monitor/Confusion_matrix"].log(neptune.types.File.as_image(em_max_mon.confusion_matrix()))
-    neptune_logger["Max_monitor/Confusion_matrix_normalized"].log(neptune.types.File.as_image(em_max_mon.confusion_matrix(normalize=True)))
+    neptune_logger["Max_monitor/Confusion_matrix"].log(neptune.types.File.as_image(em_max_mon.plot_conf_matx()))
+    neptune_logger["Max_monitor/Confusion_matrix_normalized"].log(neptune.types.File.as_image(em_max_mon.plot_conf_matx(normalized=True)))
     
     
     # AVG monitor
@@ -219,17 +219,33 @@ if __name__ == '__main__':
     neptune_logger["Avg_prob_monitor/recall"] = em_avg_mon.recall_weighted()
     neptune_logger["Avg_prob_monitor/f1"] = em_avg_mon.f1_score_weighted()
     neptune_logger["Avg_prob_monitor/classification_report"] = em_avg_mon.classify_report()
-    neptune_logger["Avg_prob_monitor/Confusion_matrix"].log(neptune.types.File.as_image(em_avg_mon.confusion_matrix()))
-    neptune_logger["Avg_prob_monitor/Confusion_matrix_normalized"].log(neptune.types.File.as_image(em_avg_mon.confusion_matrix(normalize=True)))
+    neptune_logger["Avg_prob_monitor/Confusion_matrix"].log(neptune.types.File.as_image(em_avg_mon.plot_conf_matx()))
+    neptune_logger["Avg_prob_monitor/Confusion_matrix_normalized"].log(neptune.types.File.as_image(em_avg_mon.plot_conf_matx(normalized=True)))
     
     
     
     # Evidential Zoom Monitor
+    evd_mon = Avg_prob_monitor(model)
+    y_true_evd, y_pred_evd = [],[]
+    for i, (x, y) in enumerate(test_data):
+        y_hat = avg_mon.monitor(x)
+        y_true_evd.append(y)
+        y_pred_evd.append(y_hat)
+
+        if i == len(test_data):
+            break
+    y_true_evd = np.hstack(y_true_evd)
+    y_pred_evd = np.hstack(y_pred_evd)
+    
+    em_evd_mon = eval_metrics(y_true_evd, y_pred_evd,classes=classes)
+    neptune_logger["Evidential_monitor/accuracy"] = em_evd_mon.accuracy()
+    neptune_logger["Evidential_monitor/precision"] = em_evd_mon.precision_weighted()
+    neptune_logger["Evidential_monitor/recall"] = em_evd_mon.recall_weighted()
+    neptune_logger["Evidential_monitor/f1"] = em_evd_mon.f1_score_weighted()
+    neptune_logger["Evidential_monitor/classification_report"] = em_evd_mon.classify_report()
+    neptune_logger["Evidential_monitor/Confusion_matrix"].log(neptune.types.File.as_image(em_evd_mon.plot_conf_matx()))
+    neptune_logger["Evidential_monitor/Confusion_matrix_normalized"].log(neptune.types.File.as_image(em_evd_mon.plot_conf_matx(normalized=True)))
     
     
-    
-    
-    
-    
-    
+    # stop logging
     neptune_logger.stop()

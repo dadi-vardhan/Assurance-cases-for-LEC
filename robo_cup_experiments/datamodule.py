@@ -11,13 +11,12 @@ import random
 from setuptools.namespaces import flatten
 import os
 
-DataPath = '/home/dadi_vardhan/RandD/Assurance-cases-for-LEC/robo_cup_tools' 
 
 class RoboCupDataset(Dataset):
-    def __init__(self, data_dir=DataPath,train=False,test=False,valid=False,transform=False):
+    def __init__(self,train=False,test=False,valid=False,transform=None):
         self.image_paths = []
         self.transform = transform
-        self.data_dir = data_dir
+        self.data_dir = '/home/dadi_vardhan/RandD/Assurance-cases-for-LEC/robo_cup_tools'
         
         #idx_to_class = {i:j for i, j in enumerate(classes)}
         #class_to_idx = {value:key for key,value in idx_to_class.items()}
@@ -26,15 +25,16 @@ class RoboCupDataset(Dataset):
                         "BEARING_BOX": 2,
                         "CONTAINER_BOX_BLUE": 3,
                         "CONTAINER_BOX_RED": 4,
-                        "F20_20_B": 5,
-                        "F20_20_G": 6,
-                        "M20": 7,
-                        "M20_100": 8,
-                        "M30": 9,
-                        "MOTOR": 10,
-                        "R20": 11,
-                        "S40_40_B": 12,
-                        "S40_40_G": 13}
+                        "DISTANCE_TUBE": 5,
+                        "F20_20_B": 6,
+                        "F20_20_G": 7,
+                        "M20": 8,
+                        "M20_100": 9,
+                        "M30": 10,
+                        "MOTOR": 11,
+                        "R20": 12,
+                        "S40_40_B": 13,
+                        "S40_40_G": 14}
         
         if train == True:
             self.image_paths = self.get_data_paths(self.data_dir)[0]
@@ -52,12 +52,12 @@ class RoboCupDataset(Dataset):
         image = cv.imread(image_filepath)
         
         image = cv.cvtColor(image, cv.COLOR_BGR2RGB)
+        image = cv.resize(image, (224, 224), interpolation = cv.INTER_AREA)
 
         label = image_filepath.split('/')[-2]
         label = self.class_to_idx[label]
         if self.transform is not None:
-            image = self.transform(image=image)["image"]
-            print(image)
+            image = self.transform(image)
         return image, label
     
     def get_data_paths(self,data_dir):
@@ -79,25 +79,20 @@ class RoboCupDataModule(pl.LightningDataModule):
         super().__init__()
         self.data_dir = data_dir
         self.transform = transforms.Compose(
-            [   transforms.Resize((224,224)),
+            [   #transforms.Resize((224,224)),
                 zoom_image(),
                 transforms.ToTensor()
             ])
-
+        self.dims = (1, 224, 224)
+        self.num_classes = 15
         self.batch_size = batch_size
-    
-    # def prepare_data(self):
-    #     # load data
-    #     RoboCupDataset(self.data_dir, train=True)
-    #     RoboCupDataset(self.data_dir, test=True)
-    #     RoboCupDataset(self.data_dir, valid=True)
         
     def setup(self, stage=None):
 
         # Assign train/val datasets for use in dataloaders
         if stage == "fit" or stage is None:
-            self.robo_cup_train = RoboCupDataset(self.data_dir, train=True, transform=self.transform)
-            self.robo_cup_val = RoboCupDataset(self.data_dir, valid=True, transform=self.transform) 
+            self.robo_cup_train = RoboCupDataset(train=True, transform=self.transform)
+            self.robo_cup_val = RoboCupDataset(valid=True, transform=self.transform) 
 
         # Assign test dataset for use in dataloader(s)
         if stage == "test" or stage is None:
@@ -113,7 +108,11 @@ class RoboCupDataModule(pl.LightningDataModule):
         return DataLoader(self.robo_cup_test, batch_size=self.batch_size,num_workers=8)
 
 
-if __name__ == "__main__":
-    DataPath = '/home/dadi_vardhan/RandD/Assurance-cases-for-LEC/robo_cup_tools'
-    dm = RoboCupDataset(DataPath,valid=True)
-    print(len(dm))  # Number of images in the dataset
+# if __name__ == "__main__":
+
+#     dm = RoboCupDataModule(os.getcwd())
+#     dm.setup(stage="fit")
+#     print(len(dm.train_dataloader()))
+#     dm.setup(stage="test")
+#     test_dataloader = dm.test_dataloader()
+#     print(len(test_dataloader))

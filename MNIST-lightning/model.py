@@ -25,9 +25,9 @@ class MnistModel(pl.LightningModule):
         self.num_classes = len(self.classes)
         self.learning_rate = learning_rate
         self.hidden_size = hidden_size
-        self.model = resnet18()
-        self.model.conv1 = torch.nn.Conv2d(1,64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False) # resnet
-        #self.model.features[0][0] = torch.nn.Conv2d(1,32, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False) #mobilenet
+        self.model = mobilenet_v2()
+        #self.model.conv1 = torch.nn.Conv2d(1,64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False) # resnet
+        self.model.features[0][0] = torch.nn.Conv2d(1,32, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False) #mobilenet
         #self.model.features[0] = torch.nn.Conv2d(1, 96, kernel_size=(7, 7), stride=(2, 2)) #sqeezenet
         self.loss_func = torch.nn.CrossEntropyLoss()
         self.save_hyperparameters()

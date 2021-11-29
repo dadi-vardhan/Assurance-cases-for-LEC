@@ -12,7 +12,7 @@ class MNISTDataModule(pl.LightningDataModule):
         self.data_dir = data_dir
         self.transform = transforms.Compose(
             [
-                zoom_image(),
+                #zoom_image(),
                 transforms.ToTensor()
             ])
         

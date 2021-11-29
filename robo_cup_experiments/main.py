@@ -8,7 +8,6 @@ from model import MnistModel
 from pytorch_lightning.loggers.neptune import NeptuneLogger
 
 
-DataPath = '/home/dadi_vardhan/RandD/Assurance-cases-for-LEC/robo_cup_tools'
 # setting global seed
 seed_everything(123, workers=True)
 
@@ -34,7 +33,7 @@ neptune_logger = NeptuneLogger(
 #     filename="sample-mnist-{epoch:02d}-{val_loss:.2f}")
 
 # Init DataModule
-dm = RoboCupDataModule(DataPath)
+dm = RoboCupDataModule(os.getcwd())
 
 # Init model from datamodule's attributes
 model = MnistModel(*dm.size())
