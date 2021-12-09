@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import pytorch_lightning as pl
-from torchvision.models import resnet18,mobilenet_v2,squeezenet1_0
+from torchvision.models import resnet18,mobilenet_v2,squeezenet1_0,vgg16,alexnet
 import torch.nn.functional as F
 from torchmetrics.functional.classification.accuracy import accuracy
 from eval_metrics import eval_metrics
@@ -25,10 +25,12 @@ class MnistModel(pl.LightningModule):
         self.num_classes = len(self.classes)
         self.learning_rate = learning_rate
         self.hidden_size = hidden_size
-        self.model = mobilenet_v2()
-        #self.model.conv1 = torch.nn.Conv2d(1,64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False) # resnet
-        self.model.features[0][0] = torch.nn.Conv2d(1,32, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False) #mobilenet
+        self.model = resnet18()
+        self.model.conv1 = torch.nn.Conv2d(1,64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False) # resnet
+        #self.model.features[0][0] = torch.nn.Conv2d(1,32, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False) #mobilenet
         #self.model.features[0] = torch.nn.Conv2d(1, 96, kernel_size=(7, 7), stride=(2, 2)) #sqeezenet
+        #self.model.features[0] = torch.nn.Conv2d(1,64,kernel_size=(3,3),stride=(1,1),padding=(1,1))#vgg16
+        #self.model.features[0] = torch.nn.Conv2d(1,64,kernel_size=(11,11),stride=(4,4),padding=(2,2))#alexnet
         self.loss_func = torch.nn.CrossEntropyLoss()
         self.save_hyperparameters()
 

@@ -4,7 +4,7 @@ import pytorch_lightning as pl
 from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from datamodule import RoboCupDataModule
-from model import MnistModel
+from model import RobocupModel
 from pytorch_lightning.loggers.neptune import NeptuneLogger
 
 
@@ -28,15 +28,11 @@ neptune_logger = NeptuneLogger(
     #upload_source_files=["**/*.py", "*.yaml"]
     )
 
-# checkpoint_callback = ModelCheckpoint(
-#     monitor="val_loss",
-#     filename="sample-mnist-{epoch:02d}-{val_loss:.2f}")
-
 # Init DataModule
-dm = RoboCupDataModule(os.getcwd())
+dm = RoboCupDataModule()
 
 # Init model from datamodule's attributes
-model = MnistModel(*dm.size())
+model = RobocupModel(*dm.size())
 
 # Init trainer
 trainer = pl.Trainer(default_root_dir=os.getcwd(),
@@ -50,10 +46,12 @@ trainer = pl.Trainer(default_root_dir=os.getcwd(),
     progress_bar_refresh_rate=5,
     gpus=1)
 
-trainer.fit(model, dm)
-trainer.validate(model,dm)
-trainer.test(model,dm)
-#trainer.tune(model,dm)
+dm.setup(stage="fit")
+trainer.fit(model,dm.train_dataloader())
+trainer.validate(model,dm.val_dataloader())
+dm.setup(stage="test")
+trainer.test(model,dm.test_dataloader())
+#trainer.tune(model,dm.train_dataloader())
 
 # stopping logger
 neptune_logger.experiment.stop()

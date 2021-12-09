@@ -11,6 +11,7 @@ Untitled/
 robo_cup_tools/
 tools/
 lightning_logs/
+CIFAR-10- experiments/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

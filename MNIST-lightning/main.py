@@ -24,7 +24,7 @@ neptune_logger = NeptuneLogger(
     api_key=os.environ['NEPTUNE_API_TOKEN'],
     project_name="dadivishnuvardhan/AC-LECS",
     # experiment_name="default",
-    tags=["mnist", "sqz-net", "full", "no-augment"],
+    tags=["mnist", "vgg-16", "full", "augment"],
     #upload_source_files=["**/*.py", "*.yaml"]
 )
 
@@ -46,7 +46,7 @@ trainer = pl.Trainer(default_root_dir=os.getcwd(),
                      precision=16,
                      weights_summary="full",
                      callbacks=[early_stopping],
-                     fast_dev_run=False,
+                     fast_dev_run=True,
                      logger=neptune_logger,
                      progress_bar_refresh_rate=5,
                      gpus=1)

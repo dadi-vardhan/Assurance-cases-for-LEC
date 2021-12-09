@@ -12,7 +12,7 @@ def get_device():
 
 
 def reduce_img(x, size, pos):
-    original_size = 28
+    original_size = 224
     if (pos[0] + size)>original_size:
       pos[0] = pos[0] - (pos[0]+size-original_size)
     if (pos[1] + size)>original_size:
@@ -43,14 +43,14 @@ class zoom_image(object):
             nimg = reduce_img(img, ss, [x,y])
             nimg = np.clip(a=nimg, a_min=0, a_max=1)
             rimgs[:, i*28:(i+1)*28] = nimg
-            img_variable = nimg.reshape((28,28))
+            img_variable = nimg.reshape((224,224))
             zoomed_imgs.append(img_variable)
             self.ss_list.append(ss)
         zoomed_imgs = np.array(zoomed_imgs)
         if self.monitor == True:
             return zoomed_imgs,self.ss_list,rimgs
         elif self.monitor == False:
-            return zoomed_imgs[rand_img].reshape((28,28))
+            return zoomed_imgs[rand_img].reshape((224,224))
     
     def  __repr__(self):
         return self.__class__.__name__+'()'
