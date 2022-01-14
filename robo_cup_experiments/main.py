@@ -15,7 +15,8 @@ seed_everything(123, workers=True)
 # callbacks
 early_stopping = EarlyStopping(
                     monitor="val_loss",
-                    patience = 3,
+                    patience = 5,
+                    
                     check_finite=True,
                 )   
 
@@ -24,7 +25,7 @@ neptune_logger = NeptuneLogger(
     api_key=os.environ['NEPTUNE_API_TOKEN'],
     project_name="dadivishnuvardhan/AC-LECS",
     #experiment_name="default",
-    #tags=["mnist", "lightning", "pytorch"],
+    tags=["robo-cup", "zoom", "sqz-net"],
     #upload_source_files=["**/*.py", "*.yaml"]
     )
 
@@ -36,22 +37,28 @@ model = RobocupModel(*dm.size())
 
 # Init trainer
 trainer = pl.Trainer(default_root_dir=os.getcwd(),
-    min_epochs=5,
+    min_epochs=100,
     max_epochs=500,
-    precision = 16,
+    #precision = 16,
+    #auto_lr_find=True,
+    #auto_scale_batch_size="binsearch",
     weights_summary = "full",
     callbacks=[early_stopping],
-    fast_dev_run = True,
+    fast_dev_run = False,
     logger = neptune_logger,
     progress_bar_refresh_rate=5,
     gpus=1)
 
+# trainer = pl.Trainer(auto_lr_find=True)
+# dm.setup(stage="fit")
+# trainer.tune(model,dm)
+
 dm.setup(stage="fit")
-trainer.fit(model,dm.train_dataloader())
-trainer.validate(model,dm.val_dataloader())
+trainer.fit(model, dm)
+trainer.validate(model, dm)
+
 dm.setup(stage="test")
-trainer.test(model,dm.test_dataloader())
-#trainer.tune(model,dm.train_dataloader())
+trainer.test(model, dm)
 
 # stopping logger
 neptune_logger.experiment.stop()

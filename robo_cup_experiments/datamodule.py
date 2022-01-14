@@ -86,16 +86,17 @@ class RoboCupDataset(VisionDataset):
 
 
 class RoboCupDataModule(pl.LightningDataModule):
-    def __init__(self, batch_size=32):
+    def __init__(self, batch_size=256):
         super().__init__()
         #self.data_dir = data_dir
         self.transform = transforms.Compose(
             [
-                #zoom_image(),
+                zoom_image(),
                 transforms.ToTensor(),
+                transforms.Resize((64,64)),
                 transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             ])
-        self.dims = (3, 224, 224)
+        self.dims = (3, 64, 64)
         self.num_classes = 15
         self.batch_size = batch_size
         
@@ -130,7 +131,7 @@ if __name__ == "__main__":
     dm.setup(stage="test")
     print(len(dm.test_dataloader()))
     for i, (x, y) in enumerate(dm.val_dataloader()):
-        print(x.shape, y.shape)
+        print(x.shape, y.squeeze().long())
         
         if i == 5:
             break
@@ -138,6 +139,6 @@ if __name__ == "__main__":
     # val_set = RoboCupDataset(valid=True, transform=transforms.ToTensor())
     # for i in range(len(val_set)):
     #     x, y = val_set[i]
-    #     print(x.shape, y.shape)
+    #     print(x.shape, y)
     #     if i == 5:
     #         break

@@ -1,33 +1,50 @@
 import torch
 import numpy as np
 import pytorch_lightning as pl
-from torchvision.models import resnet18,mobilenet_v2,squeezenet1_0
+from torch._C import device
+from torchvision.models import resnet18,mobilenet_v2,squeezenet1_0,resnet50,mobilenet_v3_large,vgg16,resnet152
 import torch.nn.functional as F
 from torchmetrics.functional.classification.accuracy import accuracy
+from torchvision.models.squeezenet import squeezenet1_1
 from eval_metrics import eval_metrics
 from neptune.new.types import File
 import neptune.new as neptune
-
+from utils import get_device
+from renet import ResNet50
 
 
 class RobocupModel(pl.LightningModule):
-    def __init__(self, channels=3, width=224, height=224, learning_rate=0.02):
+    def __init__(self, channels=3, width=64, height=64, learning_rate=0.0022908676527677745):
 
         super().__init__()
         self.channels = channels
         self.width = width
         self.height = height
-        self.classes = ("AXIS","BEARING","BEARING_BOX","CONTAINER_BOX_BLUE","CONTAINER_BOX_RED",
+        self.classes = ("AXIS","BEARING","BEARING_BOX","CONTAINER_BOX_BLUE","CONTAINER_BOX_RED","DISTANCE_TUBE",
                         "F20_20_B","F20_20_G","M20","M20_100","M30","MOTOR","R20","S40_40_B","S40_40_G")
         self.num_classes = len(self.classes)
         self.learning_rate = learning_rate
-        self.model = resnet18()
+        self.model = mobilenet_v2(pretrained=True)
+        
+        #self.model.fc = torch.nn.Linear(in_features=2048, out_features=15, bias=True) # resnet50
+        self.model.classifier[1] = torch.nn.Linear(in_features=1280,out_features=15,bias=True) #mobilenet_v2
+        #self.model.classifier[1] = torch.nn.Conv2d(512,15,kernel_size=(1,1),stride=(1,1)) #squeezenet1_1
+        #self.model.classifier[3] = torch.nn.Linear(in_features=1280, out_features=15, bias=True)# mobilenet_v3 large
         self.loss_func = torch.nn.CrossEntropyLoss()
         self.save_hyperparameters()
         
 
     def forward(self,x):
-        return self.model(x)
+        x = self.model(x)
+        # x = torch.nn.Linear(in_features=1000, out_features=512, bias=True,device='cuda')(x)
+        # x = torch.nn.functional.relu(x)
+        # x = torch.nn.Linear(in_features=512, out_features=128, bias=True,device='cuda')(x)
+        # x = torch.nn.functional.relu(x)
+        # x = torch.nn.Linear(in_features=128, out_features=64, bias=True,device='cuda')(x)
+        # x = torch.nn.functional.relu(x)
+        # x = torch.nn.Linear(in_features=64, out_features=self.num_classes, bias=True,device='cuda')(x)
+        # x = torch.nn.functional.log_softmax(x,dim=1)
+        return x
 
     def training_step(self, batch, batch_idx):
         x, y = batch
@@ -50,8 +67,8 @@ class RobocupModel(pl.LightningModule):
         acc = accuracy(preds, y)
         self.log("val_loss", loss, prog_bar=True)
         self.log("val_acc", acc, prog_bar=True)
-        self.logger.experiment.log_metric('Val_loss',loss)
-        self.logger.experiment.log_metric('Val_acc',acc)
+        self.logger.experiment.log_metric('val_loss',loss)
+        self.logger.experiment.log_metric('val_acc',acc)
         return {'val_loss': loss}
     
     def validation_epoch_end(self, outputs):
@@ -62,15 +79,14 @@ class RobocupModel(pl.LightningModule):
         
     def test_step(self, batch, batch_idx):
         x, y = batch
-        logits = self.model(x)
+        logits = self(x)
         loss = self.loss_func(logits, y)
         preds = torch.argmax(logits, dim=1)
         acc = accuracy(preds,y)
         self.log("test_loss", loss,on_epoch=True, prog_bar=True)
         self.log("test_acc", acc,on_epoch=True, prog_bar=True)
-        trgts = y
-        preds = preds
-        eval = eval_metrics(trgts,preds,self.classes)
+        
+        eval = eval_metrics(y,preds,self.classes)
         cm = eval.plot_conf_matx()
         cm_norm = eval.plot_conf_matx(normalized=True)
         self.logger.experiment.log_image('Confusion Matrix',cm)
@@ -101,8 +117,8 @@ class RobocupModel(pl.LightningModule):
         self.logger.experiment.log_metric('Avg_test_loss',avg_loss)
         return avg_loss
     
-    def predict_step(self, batch, batch_idx: int, dataloader_idx: int = None):
-        return self(batch)
+    # def predict_step(self, batch, batch_idx: int, dataloader_idx: int = None):
+    #     return self(batch)
     
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)

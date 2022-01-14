@@ -42,7 +42,6 @@ class eval_metrics():
         return recall_score(self.targets,self.preds,average='weighted')
     
     def classify_report(self):
-        return classification_report(self.targets,self.preds,
-                                        target_names=self.classes)
+        return classification_report(self.targets,self.preds,target_names=self.classes)
         
 

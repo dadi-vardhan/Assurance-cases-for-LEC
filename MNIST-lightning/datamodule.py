@@ -7,16 +7,18 @@ import pytorch_lightning as pl
 from utils import zoom_image
 
 class MNISTDataModule(pl.LightningDataModule):
-    def __init__(self, data_dir: str, batch_size=1028):
+    def __init__(self, data_dir: str, batch_size=128):
         super().__init__()
         self.data_dir = data_dir
         self.transform = transforms.Compose(
             [   
                 zoom_image(),
-                transforms.ToTensor()
+                transforms.ToTensor(),
+                transforms.Resize((64,64)),
+                
             ])
         
-        self.dims = (1, 28, 28)
+        self.dims = (1, 64, 64)
         self.num_classes = 10
         self.batch_size = batch_size
 

@@ -6,7 +6,6 @@ from sklearn.metrics import classification_report,accuracy_score,f1_score,precis
 from scikitplot.metrics import plot_confusion_matrix
 
 
-
 class eval_metrics():
     def __init__(self,targets,preds,classes):
         try:
