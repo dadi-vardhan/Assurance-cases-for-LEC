@@ -1,45 +1,41 @@
-from typing import NoReturn
-import cv2 as cv
 import torch
+from torchvision.transforms import transforms
+from torch.utils.data import DataLoader, random_split
+import numpy as np
 import pytorch_lightning as pl
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms, utils
-from torchvision.datasets import VisionDataset
 import glob
 import numpy as np
-from utils import zoom_image
 import random
 from setuptools.namespaces import flatten
 import os
 from itertools import islice
+from torchvision.datasets import VisionDataset
+import cv2 as cv
+
+# pip install pytorch-lightning==1.5.0
 
 
-class RoboCupDataset(VisionDataset):
-    def __init__(self,train=False,test=False,valid=False,transform=None):
+class FaceDataset(VisionDataset):
+    def __init__(self,data_dir,train=False,test=False,valid=False,transform=None):
         self.image_paths = []
         self.transform = transform
-        self.data_dir = '/home/dadi_vardhan/RandD/Assurance-cases-for-LEC/tools'
+        self.data_dir = data_dir
         self.train_size = 0.7
         self.train_size = 0.2
         self.valid_size = 0.1
         
         #idx_to_class = {i:j for i, j in enumerate(classes)}
         #class_to_idx = {value:key for key,value in idx_to_class.items()}
-        self.class_to_idx = {"AXIS": 0, 
-                        "BEARING": 1,
-                        "BEARING_BOX": 2,
-                        "CONTAINER_BOX_BLUE": 3,
-                        "CONTAINER_BOX_RED": 4,
-                        "DISTANCE_TUBE": 5,
-                        "F20_20_B": 6,
-                        "F20_20_G": 7,
-                        "M20": 8,
-                        "M20_100": 9,
-                        "M30": 10,
-                        "MOTOR": 11,
-                        "R20": 12,
-                        "S40_40_B": 13,
-                        "S40_40_G": 14}
+        self.class_to_idx = {"a_j__buckley": 0, 
+                        "a_r__rahman": 1,
+                        "aamir_khan" : 2,
+                        "aaron_staton": 3,
+                        "aaron_tveit": 4,
+                        "aaron_yoo": 5,
+                        "abbie_cornish": 6,
+                        "abel_ferrara" : 7,
+                        "abigail_breslin": 8,
+                        "abigail_spencer": 9}
         
         if train == True:
             self.image_paths = self.get_data_paths(self.data_dir)[0]
@@ -82,64 +78,57 @@ class RoboCupDataset(VisionDataset):
         valid_image_paths = Output[2]
         test_image_paths = Output[1]
         return train_image_paths, valid_image_paths, test_image_paths
-    
 
 
-class RoboCupDataModule(pl.LightningDataModule):
-    def __init__(self, batch_size=256):
+class FaceDataModule(pl.LightningDataModule):
+    def __init__(self, data_dir: str, batch_size=128):
         super().__init__()
-        #self.data_dir = data_dir
+        self.data_dir = data_dir
         self.transform = transforms.Compose(
-            [
-                zoom_image(),
+                [   
                 transforms.ToTensor(),
                 transforms.Resize((64,64)),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+                transforms.Normalize((0.5,), (0.5,))
             ])
-        self.dims = (3, 64, 64)
-        self.num_classes = 15
+        
+        self.dims = (1, 64, 64)
+        self.num_classes = 10
         self.batch_size = batch_size
-        
-        
+
+    def prepare_data(self):
+        # download
+        FaceDataset(self.data_dir, train=True)
+        FaceDataset(self.data_dir, train=False)
+
     def setup(self, stage=None):
 
         # Assign train/val datasets for use in dataloaders
         if stage == "fit" or stage is None:
-            self.robo_cup_train = RoboCupDataset(train=True, transform=self.transform)
-            self.robo_cup_val = RoboCupDataset(valid=True, transform=self.transform) 
+           self.mnist_train = FaceDataset(self.data_dir, train=True, transform=self.transform)
+           self.mnist_val = FaceDataset(self.data_dir, valid=True, transform=self.transform)
 
         # Assign test dataset for use in dataloader(s)
         if stage == "test" or stage is None:
-            self.robo_cup_test = RoboCupDataset(test=True,transform=transforms.ToTensor())
+            self.mnist_test = FaceDataset(self.data_dir, test=True,transform=self.transform)
 
     def train_dataloader(self):
-        return DataLoader(self.robo_cup_train, batch_size=self.batch_size,num_workers=8)
+        return DataLoader(self.mnist_train, batch_size=self.batch_size,num_workers=8)
 
     def val_dataloader(self):
-        return DataLoader(self.robo_cup_val, batch_size=self.batch_size,num_workers=8)
+        return DataLoader(self.mnist_val, batch_size=self.batch_size,num_workers=8)
 
     def test_dataloader(self):
-        return DataLoader(self.robo_cup_test, batch_size=self.batch_size,num_workers=8)
+        return DataLoader(self.mnist_test, batch_size=self.batch_size,num_workers=8)
+    
 
-
-if __name__ == "__main__":
-
-    dm = RoboCupDataModule()
-    dm.setup(stage="fit")
-    print(len(dm.train_dataloader()))
-    print(len(dm.val_dataloader()))
-    dm.setup(stage="test")
-    print(len(dm.test_dataloader()))
-    for i, (x, y) in enumerate(dm.val_dataloader()):
-        print(x.shape, y.squeeze().long())
+# if __name__ == '__main__':
+#     data_dir = '/home/dadi_vardhan/RandD/Assurance-cases-for-LEC/Data/train'
+#     dm = FaceDataModule(data_dir,batch_size=32)
+#     dm.setup(stage="fit")
+#     for i, (x,y) in enumerate(dm.train_dataloader()):
+#         print(x.shape)
+#         print(y.shape)
+#         print(y)
         
-        if i == 5:
-            break
-    
-    # val_set = RoboCupDataset(valid=True, transform=transforms.ToTensor())
-    # for i in range(len(val_set)):
-    #     x, y = val_set[i]
-    #     print(x.shape, y)
-    #     if i == 5:
-    #         break
-    
+#         if i == 10:
+#             break

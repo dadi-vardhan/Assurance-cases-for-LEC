@@ -5,6 +5,7 @@
 .neptune
 *.json
 #folders
+Data/
 raw/
 MNIST/
 Untitled/

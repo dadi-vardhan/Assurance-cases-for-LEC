@@ -3,8 +3,8 @@ import os
 import pytorch_lightning as pl
 from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
-from datamodule import RoboCupDataModule
-from model import RobocupModel
+from datamodule import FaceDataModule
+from model import FaceModel
 from pytorch_lightning.loggers.neptune import NeptuneLogger
 
 
@@ -22,22 +22,23 @@ early_stopping = EarlyStopping(
 # neptune logger for logging metrics
 neptune_logger = NeptuneLogger(
     api_key=os.environ['NEPTUNE_API_TOKEN'],
-    project_name="dadivishnuvardhan/AC-LECS",
+    project="dadivishnuvardhan/Faceruns",
     #experiment_name="default",
-    tags=["robo-cup", "zoom", "sqz-net"],
+    tags=["facedata", "mobilenetv2","full-run"],
     #upload_source_files=["**/*.py", "*.yaml"]
     )
 
+data_dir = "/home/dadi_vardhan/RandD/Assurance-cases-for-LEC/Data/train"
 # Init DataModule
-dm = RoboCupDataModule()
+dm = FaceDataModule(data_dir=data_dir, batch_size=32)
 
 # Init model from datamodule's attributes
-model = RobocupModel(*dm.size())
+model = FaceModel(*dm.size())
 
 # Init trainer
 trainer = pl.Trainer(default_root_dir=os.getcwd(),
-    min_epochs=100,
-    max_epochs=500,
+    min_epochs=25,
+    max_epochs=30,
     #precision = 16,
     #auto_lr_find=True,
     #auto_scale_batch_size="binsearch",
